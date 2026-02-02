@@ -223,6 +223,7 @@ class RalphLoop:
         memory_client: MemoryLearningClient = None,
         max_iterations: int = 100,
         max_retries_per_story: int = 3,
+        ralph_work_dir: Path = None,
     ):
         self.project_root = Path(project_root)
         self.prd = prd or (PRD.from_file(prd_file) if prd_file else None)
@@ -232,6 +233,14 @@ class RalphLoop:
         self.max_iterations = max_iterations
         self.max_retries_per_story = max_retries_per_story
         
+        # Ralph work directory for all generated outputs
+        if ralph_work_dir:
+            self.ralph_work_dir = Path(ralph_work_dir)
+        else:
+            # Default to ralph-work in parent of project_root
+            self.ralph_work_dir = self.project_root.parent / "ralph-work"
+        self.ralph_work_dir.mkdir(parents=True, exist_ok=True)
+        
         # State tracking
         self.iteration = 0
         self.started_at: Optional[datetime] = None
@@ -239,10 +248,10 @@ class RalphLoop:
         self.running = False
         
         # Progress tracking
-        self.progress_file = self.project_root / ".ralph" / "progress.json"
+        self.progress_file = self.ralph_work_dir / ".ralph" / "progress.json"
         self.story_attempts: Dict[str, List[Dict]] = {}  # story_id -> list of attempt data
         
-        logger.info(f"RalphLoop initialized: project={project_root}, stories={len(self.prd.stories) if self.prd else 0}")
+        logger.info(f"RalphLoop initialized: project={project_root}, ralph_work={self.ralph_work_dir}, stories={len(self.prd.stories) if self.prd else 0}")
     
     async def run(self) -> Dict[str, Any]:
         """
@@ -399,7 +408,7 @@ class RalphLoop:
                 return False, attempt_data
             
             # Apply code changes
-            changes = self._apply_code_changes(result.get("code", ""))
+            changes = self._apply_code_changes(result.get("code", ""), story)
             attempt_data["changes_made"] = changes
             
             if changes == 0:
@@ -524,9 +533,14 @@ class RalphLoop:
         
         return "\n".join(prompt_parts)
     
-    def _apply_code_changes(self, code: str) -> int:
+    def _apply_code_changes(self, code: str, story: UserStory = None) -> int:
         """
         Apply generated code changes to the project.
+        Routes files to ralph-work/{story_id}/ instead of project_root.
+        
+        Args:
+            code: Generated code with file markers
+            story: Current user story (used for output directory organization)
         
         Returns:
             Number of changes applied
@@ -545,14 +559,16 @@ class RalphLoop:
         
         for lang, filepath, content in matches:
             try:
-                target_path = self.project_root / filepath
+                # Route generated files to ralph-work directory organized by story
+                story_dir = self.ralph_work_dir / "generated" / story.id if story else self.ralph_work_dir / "generated" / "misc"
+                target_path = story_dir / filepath
                 target_path.parent.mkdir(parents=True, exist_ok=True)
                 
                 with open(target_path, 'w', encoding='utf-8') as f:
                     f.write(content.strip())
                 
                 changes += 1
-                logger.info(f"Applied changes to: {filepath}")
+                logger.info(f"Applied changes to ralph-work: {story.id if story else 'misc'}/{filepath}")
                 
             except Exception as e:
                 logger.warning(f"Failed to apply changes to {filepath}: {e}")
@@ -580,14 +596,16 @@ class RalphLoop:
                         if i > 0:
                             filename = filename.replace('.py', f'_{i}.py')
                         
-                        target_path = self.project_root / "src" / filename
+                        # Route to ralph-work/generated/{story_id}/src
+                        story_dir = self.ralph_work_dir / "generated" / (story.id if story else "misc")
+                        target_path = story_dir / "src" / filename
                         target_path.parent.mkdir(parents=True, exist_ok=True)
                         
                         with open(target_path, 'w', encoding='utf-8') as f:
                             f.write(content.strip())
                         
                         changes += 1
-                        logger.info(f"Applied code block to: src/{filename}")
+                        logger.info(f"Applied code block to ralph-work: {story.id if story else 'misc'}/src/{filename}")
                         
                     except Exception as e:
                         logger.warning(f"Failed to apply code block: {e}")

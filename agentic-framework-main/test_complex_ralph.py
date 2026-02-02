@@ -77,7 +77,7 @@ def test_complex_task(task_info, task_num, total_tasks):
     start_time = time.time()
     
     try:
-        print(f"⏳ Sending request... ", end='', flush=True)
+        print(f">> Sending request... ", end='', flush=True)
         
         response = requests.post(
             API_URL,
@@ -86,7 +86,7 @@ def test_complex_task(task_info, task_num, total_tasks):
         )
         
         elapsed = time.time() - start_time
-        print(f"✓ Response received in {format_time(elapsed)}")
+        print(f"[+] Response received in {format_time(elapsed)}")
         
         if response.status_code == 200:
             resp_data = response.json()
@@ -122,16 +122,16 @@ def test_complex_task(task_info, task_num, total_tasks):
             # Determine status
             if quality_score >= 6:
                 status = 'EXCELLENT'
-                icon = '🌟'
+                icon = '[**]'
             elif quality_score >= 4:
                 status = 'GOOD'
-                icon = '✓'
+                icon = '[+]'
             elif quality_score >= 2:
                 status = 'PARTIAL'
-                icon = '~'
+                icon = '[~]'
             else:
                 status = 'POOR'
-                icon = '✗'
+                icon = '[-]'
             
             print()
             print(f"{icon} Status: {status}")
@@ -144,7 +144,7 @@ def test_complex_task(task_info, task_num, total_tasks):
             
             # Show snippet
             print()
-            print("📄 Response Preview (first 300 chars):")
+            print(">> Response Preview (first 300 chars):")
             print("-" * 80)
             preview = resp_text[:300].replace('\n', '\n  ')
             print(f"  {preview}...")
@@ -161,7 +161,7 @@ def test_complex_task(task_info, task_num, total_tasks):
             }
             
         else:
-            print(f"\n✗ FAIL: HTTP {response.status_code}")
+            print(f"\n[-] FAIL: HTTP {response.status_code}")
             print(f"  Response: {response.text[:200]}")
             return {
                 'task': name,
@@ -172,7 +172,7 @@ def test_complex_task(task_info, task_num, total_tasks):
             
     except requests.exceptions.Timeout:
         elapsed = time.time() - start_time
-        print(f"\n✗ TIMEOUT after {format_time(elapsed)}")
+        print(f"\n[-] TIMEOUT after {format_time(elapsed)}")
         return {
             'task': name,
             'status': 'TIMEOUT',
@@ -181,7 +181,7 @@ def test_complex_task(task_info, task_num, total_tasks):
         
     except Exception as e:
         elapsed = time.time() - start_time
-        print(f"\n✗ ERROR: {str(e)}")
+        print(f"\n[-] ERROR: {str(e)}")
         return {
             'task': name,
             'status': 'ERROR',
@@ -208,7 +208,7 @@ def main():
         
         # Short pause between tasks
         if i < len(COMPLEX_TASKS):
-            print(f"\n⏸  Pausing 5 seconds before next task...")
+            print(f"\n>> Pausing 5 seconds before next task...")
             time.sleep(5)
     
     # Summary
@@ -225,13 +225,13 @@ def main():
     ralph_count = sum(1 for r in results if r.get('uses_ralph', False))
     avg_quality = sum(r.get('quality_score', 0) for r in results) / len(results) if results else 0
     
-    print(f"\n📊 Results Breakdown:")
-    print(f"  🌟 Excellent: {excellent}")
-    print(f"  ✓  Good: {good}")
-    print(f"  ~  Partial: {partial}")
-    print(f"  ✗  Poor/Failed: {poor + failed}")
+    print(f"\n>> Results Breakdown:")
+    print(f"  [**] Excellent: {excellent}")
+    print(f"  [+]  Good: {good}")
+    print(f"  [~]  Partial: {partial}")
+    print(f"  [-]  Poor/Failed: {poor + failed}")
     print()
-    print(f"📈 Metrics:")
+    print(f">> Metrics:")
     print(f"  Average Quality Score: {avg_quality:.1f}/8.0")
     print(f"  Ralph Loop Usage: {ralph_count}/{len(results)}")
     print(f"  Total Time: {format_time(total_time)}")
@@ -239,11 +239,11 @@ def main():
     print()
     
     # Detailed table
-    print("📋 Detailed Results:")
+    print(">> Detailed Results:")
     print("-" * 80)
     for i, r in enumerate(results, 1):
-        status_icon = {'EXCELLENT': '🌟', 'GOOD': '✓', 'PARTIAL': '~', 'POOR': '✗', 
-                       'FAIL': '✗', 'TIMEOUT': '⏱', 'ERROR': '⚠'}
+        status_icon = {'EXCELLENT': '[**]', 'GOOD': '[+]', 'PARTIAL': '[~]', 'POOR': '[-]', 
+                       'FAIL': '[-]', 'TIMEOUT': '[T]', 'ERROR': '[E]'}
         icon = status_icon.get(r.get('status'), '?')
         name = r['task'][:40]
         status = r.get('status', 'UNKNOWN')
@@ -259,13 +259,13 @@ def main():
     success_rate = (excellent + good) / len(results) * 100 if results else 0
     print()
     if success_rate >= 80:
-        print("✅ OVERALL: EXCELLENT - Ralph Loop is working well!")
+        print("[++] OVERALL: EXCELLENT - Ralph Loop is working well!")
     elif success_rate >= 60:
-        print("✓  OVERALL: GOOD - Ralph Loop is functional with minor issues")
+        print("[+]  OVERALL: GOOD - Ralph Loop is functional with minor issues")
     elif success_rate >= 40:
-        print("~  OVERALL: PARTIAL - Ralph Loop needs optimization")
+        print("[~]  OVERALL: PARTIAL - Ralph Loop needs optimization")
     else:
-        print("✗  OVERALL: POOR - Ralph Loop requires significant fixes")
+        print("[-]  OVERALL: POOR - Ralph Loop requires significant fixes")
     
     print(f"   Success Rate: {success_rate:.1f}%")
     print("="*80)
