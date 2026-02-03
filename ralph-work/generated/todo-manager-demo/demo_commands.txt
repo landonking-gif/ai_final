@@ -1,0 +1,8 @@
+# Demo script for TODO Manager
+add "Buy groceries" "Milk, eggs, bread" high
+list all
+add "Write documentation" "Complete README" medium
+add "Code review" "" low
+list pending
+stats
+exit
