@@ -19,7 +19,7 @@ if sys.platform == "win32":
     sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
 
 # Configuration
-API_BASE_URL = "http://34.229.112.127:8000"
+API_BASE_URL = "http://3.80.184.21:8000"
 PUBLIC_CHAT_ENDPOINT = f"{API_BASE_URL}/api/chat/public"
 
 class TestProject:

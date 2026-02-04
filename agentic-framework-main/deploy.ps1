@@ -34,15 +34,49 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Target: $AwsIP" -ForegroundColor Green
 Write-Host ""
 
-# Test SSH
+# Test SSH with retry logic
 Write-Host "[1/7] Testing SSH..." -ForegroundColor Yellow
-$testResult = ssh -i "$PEM_KEY" -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$SSH_USER@$AwsIP" "echo OK" 2>&1
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Error: Cannot connect to $AwsIP" -ForegroundColor Red
-    Write-Host $testResult -ForegroundColor Red
+$maxRetries = 3
+$retryCount = 0
+$connected = $false
+
+# Temporarily allow errors for SSH warnings
+$oldErrorPref = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+
+while ($retryCount -lt $maxRetries -and -not $connected) {
+    if ($retryCount -gt 0) {
+        Write-Host "  Retry $retryCount/$maxRetries..." -ForegroundColor Yellow
+        Start-Sleep -Seconds 5
+    }
+    
+    # Capture only stdout, ignore stderr warnings
+    $testOutput = & ssh -i "$PEM_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -o ConnectTimeout=15 "$SSH_USER@$AwsIP" "echo SSH_OK" 2>$null
+    
+    # Check if we got the success marker
+    if ($testOutput -match "SSH_OK") {
+        $connected = $true
+        Write-Host "  [OK] Connected to $AwsIP" -ForegroundColor Green
+    } else {
+        $retryCount++
+        if ($retryCount -lt $maxRetries) {
+            Write-Host "  Connection failed, retrying..." -ForegroundColor Yellow
+        }
+    }
+}
+
+# Restore error preference
+$ErrorActionPreference = $oldErrorPref
+
+if (-not $connected) {
+    Write-Host "Error: Cannot connect to $AwsIP after $maxRetries attempts" -ForegroundColor Red
+    Write-Host "Please verify:" -ForegroundColor Yellow
+    Write-Host "  1. IP address is correct: $AwsIP" -ForegroundColor White
+    Write-Host "  2. EC2 instance is running" -ForegroundColor White
+    Write-Host "  3. Security group allows SSH (port 22) from your IP" -ForegroundColor White
+    Write-Host "  4. PEM key is correct: $PEM_KEY" -ForegroundColor White
     exit 1
 }
-Write-Host "  [OK] Connected" -ForegroundColor Green
 
 # Create archive
 Write-Host ""
@@ -94,14 +128,18 @@ Write-Host "  [OK] Archive ready" -ForegroundColor Green
 # Upload
 Write-Host ""
 Write-Host "[3/7] Uploading..." -ForegroundColor Yellow
-scp -i "$PEM_KEY" -o StrictHostKeyChecking=no "$ARCHIVE" "${SSH_USER}@${AwsIP}:/tmp/deploy.tar.gz" 2>&1 | Out-Null
+$ErrorActionPreference = "Continue"
+scp -i "$PEM_KEY" -o StrictHostKeyChecking=no "$ARCHIVE" "${SSH_USER}@${AwsIP}:/tmp/deploy.tar.gz" 2>$null
+$ErrorActionPreference = "Stop"
 Remove-Item $ARCHIVE -Force
 Write-Host "  [OK] Uploaded" -ForegroundColor Green
 
 # Extract
 Write-Host ""
 Write-Host "[4/7] Extracting..." -ForegroundColor Yellow
-ssh -i "$PEM_KEY" -o StrictHostKeyChecking=no "$SSH_USER@$AwsIP" "sudo mkdir -p /opt/agentic-framework && sudo tar -xzf /tmp/deploy.tar.gz -C /opt/agentic-framework && sudo chown -R ubuntu:ubuntu /opt/agentic-framework && rm /tmp/deploy.tar.gz"
+$ErrorActionPreference = "Continue"
+ssh -i "$PEM_KEY" -o StrictHostKeyChecking=no "$SSH_USER@$AwsIP" "sudo mkdir -p /opt/agentic-framework && sudo tar -xzf /tmp/deploy.tar.gz -C /opt/agentic-framework && sudo chown -R ubuntu:ubuntu /opt/agentic-framework && rm /tmp/deploy.tar.gz" 2>$null
+$ErrorActionPreference = "Stop"
 Write-Host "  [OK] Extracted" -ForegroundColor Green
 
 # Install dependencies
@@ -118,21 +156,44 @@ if ! ollama list | grep -q "deepseek-r1:14b"; then ollama pull deepseek-r1:14b; 
 echo "Dependencies installed"
 '@ -replace "`r", ""
 
-ssh -i "$PEM_KEY" -o StrictHostKeyChecking=no "$SSH_USER@$AwsIP" $depsScript
+$ErrorActionPreference = "Continue"
+ssh -i "$PEM_KEY" -o StrictHostKeyChecking=no "$SSH_USER@$AwsIP" $depsScript 2>$null
+$ErrorActionPreference = "Stop"
 Write-Host "  [OK] Dependencies ready" -ForegroundColor Green
 
 # Initialize Git
 Write-Host ""
 Write-Host "[6/7] Initializing Git repository..." -ForegroundColor Yellow
-scp -i "$PEM_KEY" -o StrictHostKeyChecking=no "$PROJECT_DIR\deploy-git.sh" "${SSH_USER}@${AwsIP}:/tmp/deploy-git.sh" 2>&1 | Out-Null
-ssh -i "$PEM_KEY" -o StrictHostKeyChecking=no "$SSH_USER@$AwsIP" "bash /tmp/deploy-git.sh && rm /tmp/deploy-git.sh"
+$ErrorActionPreference = "Continue"
+scp -i "$PEM_KEY" -o StrictHostKeyChecking=no "$PROJECT_DIR\deploy-git.sh" "${SSH_USER}@${AwsIP}:/tmp/deploy-git.sh" 2>$null
+ssh -i "$PEM_KEY" -o StrictHostKeyChecking=no "$SSH_USER@$AwsIP" "bash /tmp/deploy-git.sh && rm /tmp/deploy-git.sh" 2>$null
+$ErrorActionPreference = "Stop"
 Write-Host "  [OK] Git configured" -ForegroundColor Green
 
 # Deploy
 Write-Host ""
 Write-Host "[7/7] Deploying (10-15 min)..." -ForegroundColor Yellow
-scp -i "$PEM_KEY" -o StrictHostKeyChecking=no "$PROJECT_DIR\deploy-services.sh" "${SSH_USER}@${AwsIP}:/tmp/deploy-services.sh" 2>&1 | Out-Null
-ssh -i "$PEM_KEY" -o StrictHostKeyChecking=no "$SSH_USER@$AwsIP" "bash /tmp/deploy-services.sh && rm /tmp/deploy-services.sh"
+$ErrorActionPreference = "Continue"
+scp -i "$PEM_KEY" -o StrictHostKeyChecking=no "$PROJECT_DIR\deploy-services.sh" "${SSH_USER}@${AwsIP}:/tmp/deploy-services.sh" 2>$null
+ssh -i "$PEM_KEY" -o StrictHostKeyChecking=no "$SSH_USER@$AwsIP" "bash /tmp/deploy-services.sh && rm /tmp/deploy-services.sh" 2>$null
+$ErrorActionPreference = "Stop"
+
+# Ensure services are running and nginx is configured
+Write-Host ""
+Write-Host "[POST-DEPLOY] Starting services..." -ForegroundColor Yellow
+$startScript = @'
+set -e
+cd /opt/agentic-framework
+sudo docker compose up -d
+sleep 5
+sudo systemctl restart nginx
+echo "Services started"
+'@ -replace "`r", ""
+
+$ErrorActionPreference = "Continue"
+ssh -i "$PEM_KEY" -o StrictHostKeyChecking=no "$SSH_USER@$AwsIP" $startScript 2>$null
+$ErrorActionPreference = "Stop"
+Write-Host "  [OK] All services running" -ForegroundColor Green
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Green

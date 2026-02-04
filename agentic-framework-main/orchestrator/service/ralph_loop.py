@@ -762,13 +762,16 @@ class RalphLoop:
             return None
     
     def _commit_changes(self, story: UserStory) -> Optional[str]:
-        """Commit changes for completed story."""
+        """Commit changes for completed story in ralph-work directory."""
         try:
+            # Work in ralph-work directory where code is generated
+            work_dir = self.ralph_work_dir
+            
             # Stage all changes
             subprocess.run(
                 ["git", "add", "-A"],
                 check=True,
-                cwd=self.project_root
+                cwd=work_dir
             )
             
             # Commit with story reference
@@ -777,7 +780,7 @@ class RalphLoop:
                 ["git", "commit", "-m", commit_msg],
                 capture_output=True,
                 text=True,
-                cwd=self.project_root
+                cwd=work_dir
             )
             
             if result.returncode == 0:
@@ -786,15 +789,76 @@ class RalphLoop:
                     ["git", "rev-parse", "HEAD"],
                     capture_output=True,
                     text=True,
-                    cwd=self.project_root
+                    cwd=work_dir
                 )
-                return sha_result.stdout.strip()
+                commit_sha = sha_result.stdout.strip()
+                
+                # Automatically push to GitHub
+                self._push_to_github(story)
+                
+                return commit_sha
             
             return None
             
         except Exception as e:
             logger.warning(f"Failed to commit changes: {e}")
             return None
+    
+    def _push_to_github(self, story: UserStory) -> bool:
+        """Push changes to GitHub remote repository from ralph-work."""
+        try:
+            # Work in ralph-work directory
+            work_dir = self.ralph_work_dir
+            
+            # Check if remote 'origin' exists
+            check_remote = subprocess.run(
+                ["git", "remote", "get-url", "origin"],
+                capture_output=True,
+                text=True,
+                cwd=work_dir
+            )
+            
+            if check_remote.returncode != 0:
+                logger.warning("No remote 'origin' configured in ralph-work - skipping GitHub push")
+                return False
+            
+            # Get current branch
+            branch_result = subprocess.run(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                capture_output=True,
+                text=True,
+                cwd=work_dir
+            )
+            
+            if branch_result.returncode != 0:
+                logger.warning("Could not determine current branch")
+                return False
+            
+            current_branch = branch_result.stdout.strip()
+            
+            # Push to GitHub
+            logger.info(f"📤 Pushing {story.id} to GitHub (branch: {current_branch})...")
+            push_result = subprocess.run(
+                ["git", "push", "-u", "origin", current_branch],
+                capture_output=True,
+                text=True,
+                timeout=30,
+                cwd=work_dir
+            )
+            
+            if push_result.returncode == 0:
+                logger.info(f"✅ Successfully pushed {story.id} to GitHub")
+                return True
+            else:
+                logger.warning(f"⚠️ GitHub push failed: {push_result.stderr[:200]}")
+                return False
+                
+        except subprocess.TimeoutExpired:
+            logger.warning("GitHub push timed out after 30 seconds")
+            return False
+        except Exception as e:
+            logger.warning(f"Failed to push to GitHub: {e}")
+            return False
     
     def _checkout_branch(self, branch_name: str) -> None:
         """Create and checkout feature branch."""

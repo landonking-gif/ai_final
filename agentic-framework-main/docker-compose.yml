@@ -73,9 +73,10 @@ services:
       - MEMORY_SERVICE_URL=http://memory-service:8002
       - SUBAGENT_MANAGER_URL=http://subagent-manager:8003
       - OLLAMA_ENDPOINT=http://host.docker.internal:11434
-      - LOCAL_MODEL=deepseek-r1:14b
-      - DEFAULT_LLM_PROVIDER=local
-      # OpenClaw integration
+      - LOCAL_MODEL=llama3.2:3b
+      - FALLBACK_MODEL=deepseek-r1:14b
+      - DEFAULT_LLM_PROVIDER=openclaw
+      # OpenClaw integration - enabled with proper build
       - USE_OPENCLAW=true
       - OPENCLAW_GATEWAY_URL=ws://openclaw:18789
       - OPENCLAW_MODEL=ollama/deepseek-r1:14b
@@ -189,13 +190,13 @@ services:
 
   # OpenClaw Gateway - Local AI assistant runtime
   openclaw:
-    image: node:22-alpine
-    command: sh -c "apk add --no-cache git && npm install -g openclaw@latest && openclaw gateway --port 18789 --bind 0.0.0.0"
+    image: node:22-bookworm
+    command: sh -c "apt-get update && apt-get install -y git python3 make g++ && npm install -g openclaw@latest && openclaw gateway --port 18789 --bind 0.0.0.0"
     ports:
       - "18789:18789"
     environment:
       - OLLAMA_HOST=http://host.docker.internal:11434
-      - OPENCLAW_MODEL=ollama/deepseek-r1:14b
+      - OPENCLAW_MODEL=llama3.2:3b
       - OPENCLAW_WORKSPACE=/workspace
       - NODE_ENV=production
     extra_hosts:

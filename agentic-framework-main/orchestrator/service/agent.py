@@ -243,13 +243,13 @@ class OrchestratorAgent:
             except Exception as e:
                 logger.warning(f"OpenClaw call failed, falling back to Ollama: {e}")
         
-        # Fallback to direct Ollama API
-        async with httpx.AsyncClient(timeout=180.0) as client:
+        # Fallback to direct Ollama API with extended timeout for complex tasks
+        async with httpx.AsyncClient(timeout=600.0) as client:
             payload = {
                 "model": self.model.replace("ollama/", ""),  # Strip ollama/ prefix
                 "messages": messages,
                 "temperature": 0.7,
-                "max_tokens": 4096,
+                "max_tokens": 8192,
             }
             
             if tools:
@@ -269,6 +269,9 @@ class OrchestratorAgent:
                 result = response.json()
                 result["via"] = "ollama"
                 return result
+            except httpx.TimeoutException:
+                logger.error("LLM request timed out after 600s")
+                return {"error": "Request timed out. The model is processing a complex task. Please try again."}
             except Exception as e:
                 logger.error(f"LLM call failed: {e}")
                 return {"error": str(e)}

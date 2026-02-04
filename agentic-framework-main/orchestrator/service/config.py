@@ -33,11 +33,11 @@ class OrchestratorConfig(BaseSettings):
         description="Ollama endpoint for local LLM inference"
     )
     local_model: str = Field(
-        default="ollama/deepseek-r1:14b",
-        description="Local model to use (e.g., ollama/deepseek-r1:14b)"
+        default="llama3.2:3b",
+        description="Local model to use (e.g., llama3.2:3b, deepseek-r1:14b)"
     )
     
-    # OpenClaw Configuration
+    # OpenClaw Configuration - enabled with proper Debian build
     use_openclaw: bool = Field(
         default=True, description="Use OpenClaw for LLM inference (recommended)"
     )

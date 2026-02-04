@@ -1,0 +1,27 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Deploy to AWS",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"3.80.184.21"
+			],
+			"isBackground": true,
+			"group": "build"
+		},
+		{
+			"label": "Deploy to 3.80.184.21",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-File",
+				"deploy.ps1",
+				"3.80.184.21"
+			],
+			"isBackground": true,
+			"group": "build"
+		}
+	]
+}

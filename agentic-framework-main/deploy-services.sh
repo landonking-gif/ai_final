@@ -2,12 +2,30 @@
 set -e
 cd /opt/agentic-framework
 
+# Configure Ollama to listen on all interfaces
+echo "Configuring Ollama..."
+sudo mkdir -p /etc/systemd/system/ollama.service.d
+sudo tee /etc/systemd/system/ollama.service.d/override.conf > /dev/null << 'OLLAMACONF'
+[Service]
+Environment="OLLAMA_HOST=0.0.0.0:11434"
+OLLAMACONF
+sudo systemctl daemon-reload
+sudo systemctl restart ollama
+sleep 5
+
+# Pull and pre-load the faster model
+echo "Ensuring llama3.2:3b model is available..."
+ollama pull llama3.2:3b 2>/dev/null || true
+echo "Pre-loading Ollama model (this may take 30-90s on first run)..."
+timeout 120 curl -s -X POST http://localhost:11434/api/generate -d '{"model":"llama3.2:3b","prompt":"Hello","stream":false}' > /dev/null 2>&1 || echo "  Model warmup skipped (will load on first request)"
+echo "  [OK] Model ready"
+
 mkdir -p ~/.openclaw/workspace/skills ~/.openclaw/workspace/.copilot/memory/diary ~/.openclaw/workspace/.copilot/memory/reflections
 
 cat > ~/.openclaw/openclaw.json << 'OCLAWEND'
 {
   "agent": {
-    "model": "ollama/deepseek-r1:14b",
+    "model": "llama3.2:3b",
     "workspace": "~/.openclaw/workspace"
   },
   "gateway": {
@@ -31,9 +49,8 @@ ENVIRONMENT=production
 LLM_PROVIDER=openclaw
 DEFAULT_LLM_PROVIDER=openclaw
 USE_OPENCLAW=true
-OPENCLAW_GATEWAY_URL=ws://localhost:18789
-OPENCLAW_MODEL=ollama/deepseek-r1:14b
-LOCAL_MODEL=ollama/deepseek-r1:14b
+LOCAL_MODEL=llama3.2:3b
+OPENCLAW_GATEWAY_URL=ws://openclaw:18789
 OLLAMA_BASE_URL=http://host.docker.internal:11434
 OLLAMA_ENDPOINT=http://host.docker.internal:11434
 POSTGRES_HOST=postgres
@@ -70,16 +87,30 @@ sudo tee /etc/nginx/sites-available/agentic-framework >/dev/null << 'NGINXEND'
 server {
   listen 80;
   client_max_body_size 100M;
+  
+  # Increased timeouts for LLM operations
+  proxy_connect_timeout 600s;
+  proxy_send_timeout 600s;
+  proxy_read_timeout 600s;
+  send_timeout 600s;
+  
   location /api/ {
     proxy_pass http://localhost:8000/;
     proxy_set_header Host $host;
-    proxy_read_timeout 300s;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_connect_timeout 600s;
+    proxy_send_timeout 600s;
+    proxy_read_timeout 600s;
+    proxy_buffering off;
   }
   location /ws {
     proxy_pass http://localhost:8000/ws;
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
     proxy_read_timeout 86400;
   }
   location /openclaw {
@@ -87,6 +118,7 @@ server {
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection "upgrade";
+    proxy_read_timeout 86400;
   }
   location / {
     root /var/www/html;
@@ -97,5 +129,21 @@ NGINXEND
 
 sudo ln -sf /etc/nginx/sites-available/agentic-framework /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
+
+# Build and deploy dashboard
+echo "Building dashboard..."
+cd dashboard
+if [ ! -d "node_modules" ]; then
+  echo "Installing dashboard dependencies..."
+  npm install
+fi
+echo "Building production version..."
+# Use /api prefix so nginx proxy handles the routing
+npm run build
+sudo rm -rf /var/www/html/*
+sudo cp -r build/* /var/www/html/
+cd ..
+echo "Dashboard deployed to /var/www/html"
+
 sudo nginx -t && sudo systemctl restart nginx
 echo "Deployment complete"

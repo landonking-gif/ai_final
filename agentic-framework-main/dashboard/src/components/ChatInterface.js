@@ -63,18 +63,42 @@ function ChatInterface() {
     setMessages(prev => [...prev, userMessage]);
 
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found. Please log in again.');
+      }
+
+      // Convert messages to context format expected by API (List[Dict])
+      const contextMessages = messages.slice(-5).map(msg => ({
+        role: msg.sender === 'user' ? 'user' : 'assistant',
+        content: msg.text
+      }));
+
       const response = await axios.post(`${API_BASE_URL}/chat`, {
         message: input,
-        context: messages.slice(-10) // Send last 10 messages for context
+        session_id: 'web-session',
+        context: contextMessages
       }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
 
       const aiMessage = { text: response.data.response, sender: 'ai', timestamp: new Date() };
       setMessages(prev => [...prev, aiMessage]);
     } catch (error) {
       console.error('Error sending message:', error);
-      const errorMessage = { text: 'Error: Could not send message. Please check authentication.', sender: 'system', timestamp: new Date() };
+      let errorText = 'Error: Could not send message.';
+      if (error.response?.status === 401) {
+        errorText = 'Authentication failed. Please log out and log in again.';
+        localStorage.removeItem('token');
+      } else if (error.response?.data?.detail) {
+        errorText = `Error: ${JSON.stringify(error.response.data.detail)}`;
+      } else if (error.message) {
+        errorText = `Error: ${error.message}`;
+      }
+      const errorMessage = { text: errorText, sender: 'system', timestamp: new Date() };
       setMessages(prev => [...prev, errorMessage]);
     }
 

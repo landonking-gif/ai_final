@@ -3,7 +3,7 @@ Write-Host "`n========================================" -ForegroundColor Cyan
 Write-Host "Agentic Framework Deployment Test" -ForegroundColor Cyan
 Write-Host "========================================`n" -ForegroundColor Cyan
 
-[string]$ip = "34.229.112.127"
+[string]$ip = "3.80.184.21"
 $tests = 0
 $passed = 0
 
@@ -60,9 +60,9 @@ $tests++
 
 # Test Service Integration
 Write-Host "`n[5] Service Integration" -ForegroundColor Blue
-try {url = "http://$($ip):8000/health"
-    $health = Invoke-RestMethod -Uri $url
-    $health = Invoke-RestMethod "http://$ip:8000/health" -UseBasicParsing
+try {
+    $url = "http://$($ip):8000/health"
+    $health = Invoke-RestMethod -Uri $url -UseBasicParsing
     if ($health.dependencies.mcp_gateway -eq "healthy") { Write-Host "  ✓ MCP Gateway Integration" -ForegroundColor Green; $passed++ } else { Write-Host "  ✗ MCP Gateway Integration" -ForegroundColor Red }
     $tests++
     if ($health.dependencies.memory_service -eq "healthy") { Write-Host "  ✓ Memory Service Integration" -ForegroundColor Green; $passed++ } else { Write-Host "  ✗ Memory Service Integration" -ForegroundColor Red }
