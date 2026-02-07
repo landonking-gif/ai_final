@@ -13,11 +13,11 @@ sudo systemctl daemon-reload
 sudo systemctl restart ollama
 sleep 5
 
-# Pull and pre-load the DeepSeek AWQ model
-echo "Ensuring casperhansen/deepseek-r1-distill-qwen-7b-awq model is available..."
-ollama pull casperhansen/deepseek-r1-distill-qwen-7b-awq 2>/dev/null || true
+# Pull and pre-load DeepSeek R1 14B thinking model
+echo "Ensuring deepseek-r1:14b model is available..."
+ollama pull deepseek-r1:14b 2>/dev/null || true
 echo "Pre-loading Ollama model (this may take 30-90s on first run)..."
-timeout 120 curl -s -X POST http://localhost:11434/api/generate -d '{"model":"casperhansen/deepseek-r1-distill-qwen-7b-awq","prompt":"Hello","stream":false}' > /dev/null 2>&1 || echo "  Model warmup skipped (will load on first request)"
+timeout 120 curl -s -X POST http://localhost:11434/api/generate -d '{"model":"deepseek-r1:14b","prompt":"Hello","stream":false}' > /dev/null 2>&1 || echo "  Model warmup skipped (will load on first request)"
 echo "  [OK] Model ready"
 
 mkdir -p ~/.openclaw/workspace/skills ~/.openclaw/workspace/.copilot/memory/diary ~/.openclaw/workspace/.copilot/memory/reflections

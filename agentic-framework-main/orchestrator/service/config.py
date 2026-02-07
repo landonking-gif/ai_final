@@ -33,7 +33,7 @@ class OrchestratorConfig(BaseSettings):
         description="Ollama endpoint for local LLM inference"
     )
     local_model: str = Field(
-        default="casperhansen/deepseek-r1-distill-qwen-7b-awq",
+        default="deepseek-r1:14b",
         description="Local model to use (e.g., llama3.2:3b, deepseek-r1:14b)"
     )
     

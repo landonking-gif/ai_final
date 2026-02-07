@@ -73,13 +73,13 @@ services:
       - MEMORY_SERVICE_URL=http://memory-service:8002
       - SUBAGENT_MANAGER_URL=http://subagent-manager:8003
       - OLLAMA_ENDPOINT=http://host.docker.internal:11434
-      - LOCAL_MODEL=casperhansen/deepseek-r1-distill-qwen-7b-awq
+      - LOCAL_MODEL=deepseek-r1:14b
       - FALLBACK_MODEL=llama3.2:3b
       - DEFAULT_LLM_PROVIDER=openclaw
       # OpenClaw integration - enabled with proper build
       - USE_OPENCLAW=true
       - OPENCLAW_GATEWAY_URL=ws://openclaw:18789
-      - OPENCLAW_MODEL=ollama/casperhansen/deepseek-r1-distill-qwen-7b-awq
+      - OPENCLAW_MODEL=ollama/deepseek-r1:14b
       # Workspace for memory/learning
       - WORKSPACE_ROOT=/app/workspace
     extra_hosts:
@@ -196,7 +196,7 @@ services:
       - "18789:18789"
     environment:
       - OLLAMA_HOST=http://host.docker.internal:11434
-      - OPENCLAW_MODEL=casperhansen/deepseek-r1-distill-qwen-7b-awq
+      - OPENCLAW_MODEL=deepseek-r1:14b
       - OPENCLAW_WORKSPACE=/workspace
       - NODE_ENV=production
     extra_hosts:
