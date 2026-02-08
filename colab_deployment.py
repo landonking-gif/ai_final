@@ -276,15 +276,27 @@ print("  Environment configured.")
 # ── Start Microservices ──
 print("\n── Microservices ──")
 
+# Ensure PYTHONPATH is set for all services
 service_env = {**os.environ}
+service_env['PYTHONPATH'] = FRAMEWORK_DIR
 
 SERVICE_DEFS = [
-    {"name": "MCP Gateway",      "module": "mcp_gateway.service.main:app",      "port": 8080, "log": "/tmp/mcp_gateway.log",      "env": {"REDIS_URL": "redis://localhost:6379/3"}},
+    {"name": "Code Executor",    "module": "code_exec.service.main:app",        "port": 8004, "log": "/tmp/code_exec.log",        "env": {"REDIS_URL": "redis://localhost:6379/4"}},
     {"name": "Memory Service",   "module": "memory_service.service.main:app",   "port": 8002, "log": "/tmp/memory_service.log",   "env": {"REDIS_URL": "redis://localhost:6379/2"}},
     {"name": "SubAgent Manager", "module": "subagent_manager.service.main:app", "port": 8003, "log": "/tmp/subagent_manager.log", "env": {"REDIS_URL": "redis://localhost:6379/1", "SUBAGENT_USE_OPENCLAW": "false", "SUBAGENT_LLM_PROVIDER": "ollama", "SUBAGENT_LLM_MODEL": PRIMARY_MODEL}},
-    {"name": "Code Executor",    "module": "code_exec.service.main:app",        "port": 8004, "log": "/tmp/code_exec.log",        "env": {"REDIS_URL": "redis://localhost:6379/4"}},
+    {"name": "MCP Gateway",      "module": "mcp_gateway.service.main:app",      "port": 8080, "log": "/tmp/mcp_gateway.log",      "env": {"REDIS_URL": "redis://localhost:6379/3"}},
     {"name": "Orchestrator",     "module": "orchestrator.service.main:app",     "port": 8000, "log": "/tmp/orchestrator.log",     "env": {}},
 ]
+
+def check_service_health(port, max_retries=10):
+    """Wait for service to respond on health endpoint"""
+    for i in range(max_retries):
+        try:
+            urllib.request.urlopen(f"http://localhost:{port}/health", timeout=2)
+            return True
+        except:
+            time.sleep(1)
+    return False
 
 for svc in SERVICE_DEFS:
     print(f"  Starting {svc['name']} (:{svc['port']})...", end=" ", flush=True)
@@ -297,8 +309,12 @@ for svc in SERVICE_DEFS:
         stderr=subprocess.STDOUT,
         env=svc_env
     )
-    time.sleep(3)
-    print(f"OK (PID {proc.pid})")
+    
+    # Wait for service to be healthy
+    if check_service_health(svc["port"]):
+        print(f"OK (PID {proc.pid})")
+    else:
+        print(f"WARN (PID {proc.pid}, check {svc['log']})")
 
 # ── Dashboard ──
 if START_DASHBOARD:
@@ -329,8 +345,8 @@ if START_DASHBOARD:
         print("OK")
 
 # ── Health Checks ──
-print("\n  Waiting 15s for services to initialize...")
-time.sleep(15)
+print("\n  Waiting 10s for final initialization...")
+time.sleep(10)
 
 print("\n── Health Checks ──")
 endpoints = [
@@ -345,7 +361,7 @@ endpoints = [
 all_ok = True
 for name, url in endpoints:
     try:
-        req = urllib.request.urlopen(url, timeout=5)
+        req = urllib.request.urlopen(url, timeout=10)
         print(f"  {name:20s} : OK ({req.getcode()})")
     except Exception as e:
         all_ok = False
