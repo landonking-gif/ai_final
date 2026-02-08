@@ -320,9 +320,18 @@ for svc in SERVICE_DEFS:
     
     # Wait for service to be healthy
     if check_service_health(svc["port"]):
-        print(f"OK (PID {proc.pid})")
+        # Double-check process is still alive
+        if proc.poll() is None:
+            print(f"OK (PID {proc.pid})")
+        else:
+            print(f"CRASHED (PID {proc.pid} exited with code {proc.returncode})")
+            print(f"    Check {svc['log']} for errors")
     else:
-        print(f"WARN (PID {proc.pid}, check {svc['log']})")
+        # Check if process crashed
+        if proc.poll() is not None:
+            print(f"CRASHED (PID {proc.pid} exited with code {proc.returncode})")
+        else:
+            print(f"WARN (PID {proc.pid}, not responding - check {svc['log']})")
 
 # ── Dashboard ──
 dashboard_running = False
@@ -371,6 +380,24 @@ else:
 # ── Health Checks ──
 print("\n  Waiting 10s for final initialization...")
 time.sleep(10)
+
+# Check if any services crashed
+print("\n  Checking for crashed services...")
+crashed = []
+for svc in SERVICE_DEFS:
+    result = subprocess.run(
+        f"ps aux | grep '{svc['module']}' | grep -v grep",
+        shell=True, capture_output=True, text=True
+    )
+    if not result.stdout.strip():
+        crashed.append(svc['name'])
+        print(f"    ❌ {svc['name']} - process not found!")
+
+if crashed:
+    print(f"\n  WARNING: {len(crashed)} service(s) crashed. Check logs:")
+    for svc in SERVICE_DEFS:
+        if svc['name'] in crashed:
+            print(f"    tail -30 {svc['log']}")
 
 print("\n── Health Checks ──")
 endpoints = [
