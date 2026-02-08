@@ -292,9 +292,17 @@ def check_service_health(port, max_retries=10):
     """Wait for service to respond on health endpoint"""
     for i in range(max_retries):
         try:
+            # Try health endpoint first
             urllib.request.urlopen(f"http://localhost:{port}/health", timeout=2)
             return True
         except:
+            # For dashboard (port 3000), try root endpoint
+            if port == 3000:
+                try:
+                    urllib.request.urlopen(f"http://localhost:{port}/", timeout=2)
+                    return True
+                except:
+                    pass
             time.sleep(1)
     return False
 
@@ -317,6 +325,7 @@ for svc in SERVICE_DEFS:
         print(f"WARN (PID {proc.pid}, check {svc['log']})")
 
 # ── Dashboard ──
+dashboard_running = False
 if START_DASHBOARD:
     print("\n── Dashboard ──")
     dashboard_dir = f"{FRAMEWORK_DIR}/dashboard"
@@ -329,10 +338,15 @@ if START_DASHBOARD:
             stderr=subprocess.STDOUT,
             env={**os.environ, "PORT": "3000"}
         )
-        time.sleep(3)
-        print("OK")
+        time.sleep(5)
+        # Verify dashboard started
+        if check_service_health(3000, max_retries=5):
+            print("OK")
+            dashboard_running = True
+        else:
+            print("WARN (check /tmp/dashboard.log)")
     elif os.path.exists(f"{dashboard_dir}/package.json"):
-        print("  Installing dashboard deps & starting (port 3000)...", end=" ", flush=True)
+        print("  Installing deps & starting (may take 30s)...", end=" ", flush=True)
         subprocess.run(["npm", "install"], cwd=dashboard_dir, capture_output=True)
         subprocess.Popen(
             ["npm", "start"],
@@ -341,8 +355,18 @@ if START_DASHBOARD:
             stderr=subprocess.STDOUT,
             env={**os.environ, "PORT": "3000", "BROWSER": "none"}
         )
-        time.sleep(5)
-        print("OK")
+        # React apps need 20-30 seconds to build and start
+        time.sleep(25)
+        # Verify dashboard started
+        if check_service_health(3000, max_retries=10):
+            print("OK")
+            dashboard_running = True
+        else:
+            print("WARN (check /tmp/dashboard.log)")
+    else:
+        print("  Dashboard source not found - skipping")
+else:
+    print("\n  Dashboard disabled (START_DASHBOARD=False)")
 
 # ── Health Checks ──
 print("\n  Waiting 10s for final initialization...")
@@ -395,10 +419,13 @@ if ENABLE_NGROK:
         api_tunnel = ngrok.connect(8000, "http")
         api_url = api_tunnel.public_url
 
-        if START_DASHBOARD:
+        if START_DASHBOARD and dashboard_running:
             print("  Creating tunnel for Dashboard (port 3000)...")
             dash_tunnel = ngrok.connect(3000, "http")
             dashboard_url = dash_tunnel.public_url
+        elif START_DASHBOARD and not dashboard_running:
+            print("  Skipping dashboard tunnel (dashboard not running)")
+            dashboard_url = "http://localhost:3000 (not available)"
 
         os.environ["COLAB_API_URL"] = api_url
         os.environ["COLAB_DASHBOARD_URL"] = dashboard_url
@@ -411,8 +438,10 @@ if ENABLE_NGROK:
         print(f"|  API Docs:   {api_url + '/docs':<45s}|")
         print(f"|  Health:     {api_url + '/health':<45s}|")
         print(f"|  WebSocket:  {api_url.replace('http', 'ws') + '/ws':<45s}|")
-        if START_DASHBOARD:
+        if START_DASHBOARD and dashboard_running:
             print(f"|  Dashboard:  {dashboard_url:<45s}|")
+        elif START_DASHBOARD:
+            print(f"|  Dashboard:  NOT AVAILABLE (check /tmp/dashboard.log) |")
         print("+" + "=" * 58 + "+")
     except Exception as e:
         print(f"  ngrok failed: {e}")
@@ -427,8 +456,10 @@ print("    SubAgent Mgr:    http://localhost:8003")
 print("    MCP Gateway:     http://localhost:8080")
 print("    Code Executor:   http://localhost:8004")
 print("    Ollama LLM:      http://localhost:11434")
-if START_DASHBOARD:
+if START_DASHBOARD and dashboard_running:
     print("    Dashboard:       http://localhost:3000")
+elif START_DASHBOARD:
+    print("    Dashboard:       http://localhost:3000 (NOT RUNNING - check logs)")
 print("  Phase 5 complete.\n")
 
 
