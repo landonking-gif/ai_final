@@ -18,12 +18,12 @@ class CodeExecSettings(BaseSettings):
     # Service configuration
     service_name: str = Field(default="code-executor", description="Service name")
     host: str = Field(default="0.0.0.0", description="Service host")
-    port: int = Field(default=8002, description="Service port")
+    port: int = Field(default=8004, description="Service port")
     debug: bool = Field(default=False, description="Debug mode")
 
     # Skills configuration
     skills_directory: str = Field(
-        default="/Users/paragpradhan/Projects/Agent framework/agent-framework/code-exec/skills",
+        default="./code-exec/skills",
         description="Directory containing skill definitions",
     )
     max_execution_time: int = Field(

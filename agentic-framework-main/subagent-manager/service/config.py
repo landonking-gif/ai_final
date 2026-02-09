@@ -15,7 +15,7 @@ class SubagentManagerConfig(BaseSettings):
 
     # Service configuration
     host: str = Field(default="0.0.0.0", description="Service host")
-    port: int = Field(default=8001, description="Service port")
+    port: int = Field(default=8003, description="Service port")
     log_level: str = Field(default="INFO", description="Logging level")
 
     # Subagent lifecycle
@@ -28,16 +28,16 @@ class SubagentManagerConfig(BaseSettings):
     )
 
     # LLM configuration
-    llm_provider: str = Field(default="openclaw", description="Default LLM provider (openclaw, mock, local, anthropic, openai)")
+    llm_provider: str = Field(default="ollama", description="Default LLM provider (ollama, openclaw, mock, local, anthropic, openai)")
     llm_model: str = Field(default="ollama/deepseek-r1:14b", description="Default LLM model")
     llm_temperature: float = Field(default=0.7, description="Default temperature")
     llm_max_tokens: int = Field(default=4096, description="Default max tokens")
     
     # Ollama/Local LLM endpoint
-    ollama_endpoint: str = Field(default="http://host.docker.internal:11434", description="Ollama endpoint URL")
+    ollama_endpoint: str = Field(default="http://localhost:11434", description="Ollama endpoint URL")
     
     # OpenClaw configuration
-    use_openclaw: bool = Field(default=True, description="Use OpenClaw for LLM inference")
+    use_openclaw: bool = Field(default=False, description="Use OpenClaw for LLM inference (Docker only)")
     openclaw_gateway_url: str = Field(default="ws://openclaw:18789", description="OpenClaw Gateway WebSocket URL")
 
     # API keys (optional, can use env vars directly)

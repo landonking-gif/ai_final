@@ -26,10 +26,10 @@ class OrchestratorConfig(BaseSettings):
 
     # LLM Provider Configuration
     default_llm_provider: str = Field(
-        default="openclaw", description="Default LLM provider (openclaw, local, anthropic, openai, azure)"
+        default="ollama", description="Default LLM provider (ollama, openclaw, local, anthropic, openai, azure)"
     )
     ollama_endpoint: str = Field(
-        default="http://host.docker.internal:11434", 
+        default="http://localhost:11434", 
         description="Ollama endpoint for local LLM inference"
     )
     local_model: str = Field(
@@ -37,9 +37,9 @@ class OrchestratorConfig(BaseSettings):
         description="Local model to use (e.g., llama3.2:3b, deepseek-r1:14b)"
     )
     
-    # OpenClaw Configuration - enabled with proper Debian build
+    # OpenClaw Configuration - disabled by default for non-Docker deployments
     use_openclaw: bool = Field(
-        default=True, description="Use OpenClaw for LLM inference (recommended)"
+        default=False, description="Use OpenClaw for LLM inference (Docker only)"
     )
     openclaw_gateway_url: str = Field(
         default="ws://openclaw:18789", description="OpenClaw Gateway WebSocket URL"
@@ -94,13 +94,13 @@ class OrchestratorConfig(BaseSettings):
         default="http://localhost:8080", description="MCP Gateway service URL"
     )
     subagent_manager_url: str = Field(
-        default="http://localhost:8001", description="Subagent Manager service URL"
+        default="http://localhost:8003", description="Subagent Manager service URL"
     )
     memory_service_url: str = Field(
         default="http://localhost:8002", description="Memory Service URL"
     )
     code_executor_url: str = Field(
-        default="http://localhost:8003", description="Code Executor service URL"
+        default="http://localhost:8004", description="Code Executor service URL"
     )
 
     # Security Configuration
