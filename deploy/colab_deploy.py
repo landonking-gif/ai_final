@@ -438,9 +438,19 @@ def phase_2_system_deps():
             "-O /usr/local/bin/minio && chmod +x /usr/local/bin/minio",
             "Install MinIO binary")
 
-        # Ollama
-        run("curl -fsSL https://ollama.com/install.sh | sh",
-            "Install Ollama", timeout=120)
+        # Ollama - download binary directly (Colab-compatible)
+        log.info("Installing Ollama...")
+        ollama_exists = run("which ollama", check=False).returncode == 0
+        if not ollama_exists:
+            # Download latest Linux binary directly
+            run("curl -fL https://ollama.com/download/ollama-linux-amd64 "
+                "-o /usr/local/bin/ollama && chmod +x /usr/local/bin/ollama",
+                "Download Ollama binary", check=True, timeout=120)
+            # Verify installation
+            result = run("ollama --version", check=True)
+            log.info(f"Ollama installed: {result.stdout.strip()}")
+        else:
+            log.info("Ollama already installed")
 
         log.info("All system dependencies installed")
 
