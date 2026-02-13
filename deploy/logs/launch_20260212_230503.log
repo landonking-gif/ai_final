@@ -1,0 +1,29 @@
+[2026-02-12 23:05:03.345] [INFO] ========================================
+[2026-02-12 23:05:03.466] [INFO] Script Started: launch.ps1
+[2026-02-12 23:05:03.479] [INFO] Start Time: 02/12/2026 23:05:03
+[2026-02-12 23:05:03.487] [INFO] Log File: C:\Users\dmilner.AGV-040318-PC\Downloads\landon\ai_final\deploy\logs\launch_20260212_230503.log
+[2026-02-12 23:05:03.568] [INFO] Parameters: NoPush=False, Help=False
+[2026-02-12 23:05:03.574] [INFO] Script Path: C:\Users\dmilner.AGV-040318-PC\Downloads\landon\ai_final\deploy\launch.ps1
+[2026-02-12 23:05:03.581] [INFO] Repo Root: C:\Users\dmilner.AGV-040318-PC\Downloads\landon\ai_final
+[2026-02-12 23:05:03.593] [INFO] Colab URL: https://colab.research.google.com/github/landonking-gif/ai_final/blob/main/deploy/colab_notebook.ipynb
+[2026-02-12 23:05:03.618] [INFO] PowerShell Version: 5.1.26100.6584
+[2026-02-12 23:05:03.629] [INFO] User: dmilner
+[2026-02-12 23:05:03.636] [INFO] Computer: AGV-040318-PC
+[2026-02-12 23:05:03.663] [INFO] Current Directory: C:\Users\dmilner.AGV-040318-PC\Downloads\landon\ai_final
+[2026-02-12 23:05:03.671] [INFO] ========================================
+[2026-02-12 23:05:03.793] [INFO] === PUSHING TO GITHUB ===
+[2026-02-12 23:05:03.800] [INFO] Starting Git operations
+[2026-02-12 23:05:03.842] [DEBUG] [DEBUG] Changing to repo root: C:\Users\dmilner.AGV-040318-PC\Downloads\landon\ai_final
+[2026-02-12 23:05:03.853] [INFO] Changed directory to: C:\Users\dmilner.AGV-040318-PC\Downloads\landon\ai_final
+[2026-02-12 23:05:04.502] [DEBUG] [DEBUG] Git version: git version 2.52.0.windows.1
+[2026-02-12 23:05:04.517] [INFO] Git version: git version 2.52.0.windows.1
+[2026-02-12 23:05:06.079] [DEBUG] [DEBUG] Current branch: main
+[2026-02-12 23:05:06.145] [INFO] Current branch: main
+[2026-02-12 23:05:06.765] [DEBUG] [DEBUG] Remote URL: https://github.com/landonking-gif/ai_final.git
+[2026-02-12 23:05:06.775] [INFO] Remote URL: https://github.com/landonking-gif/ai_final.git
+[2026-02-12 23:05:06.797] [DEBUG] [DEBUG] Checking git status...
+[2026-02-12 23:05:09.493] [INFO] Git status check completed in 2383.047ms
+[2026-02-12 23:05:09.568] [INFO] [OK] Found uncommitted changes - staging and committing...
+[2026-02-12 23:05:09.583] [INFO] Uncommitted changes detected:
+[2026-02-12 23:05:09.799] [INFO]  M LeCoder-cgpu-CLI  M deploy/launch.ps1 ?? deploy/logs/
+[2026-02-12 23:05:09.851] [DEBUG] [DEBUG] Running git add -A...

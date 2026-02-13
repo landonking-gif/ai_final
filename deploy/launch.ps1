@@ -75,7 +75,11 @@ function Write-Err($msg) {
 
 function Write-Step($n, $msg) { 
     Write-Host "  $n. $msg" -ForegroundColor White
-    Write-Log "Step $n: $msg" "INFO"
+    if ($n) {
+        Write-Log "Step ${n}: $msg" "INFO"
+    } else {
+        Write-Log "$msg" "INFO"
+    }
 }
 
 function Write-Debug($msg) {
