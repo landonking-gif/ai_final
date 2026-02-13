@@ -12,7 +12,7 @@ class CodeExecSettings(BaseSettings):
     """Configuration settings for Code Executor service."""
 
     model_config = SettingsConfigDict(
-        env_file=".env", env_prefix="CODE_EXEC_", case_sensitive=False
+        env_file=".env", env_prefix="CODE_EXEC_", case_sensitive=False, extra="ignore"
     )
 
     # Service configuration

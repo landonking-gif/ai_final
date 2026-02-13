@@ -334,6 +334,47 @@ def wait_for_health(port: int, path: str = "/health", name: str = "",
     return False
 
 
+def wait_for_minio_ready(max_wait: int = 20) -> bool:
+    """Wait for MinIO to be ready by checking port + attempting a connection."""
+    log.info("Waiting for MinIO to be fully ready...")
+    deadline = time.time() + max_wait
+    attempt = 0
+    while time.time() < deadline:
+        attempt += 1
+        # Check if port is open first
+        if not is_port_open(9000):
+            log.debug(f"MinIO attempt {attempt}: port 9000 not open yet")
+            time.sleep(2)
+            continue
+        
+        # Try an actual HTTP request to MinIO's root endpoint
+        try:
+            req = urllib.request.urlopen("http://localhost:9000/minio/health/live", timeout=3)
+            log.info(f"MinIO ready (attempt {attempt}): HTTP {req.getcode()}")
+            return True
+        except Exception as e:
+            log.debug(f"MinIO attempt {attempt}: {str(e)[:80]}")
+            time.sleep(2)
+    
+    log.warning(f"MinIO not fully ready after {max_wait}s, but will attempt to continue")
+    return False
+
+
+def kill_port(port: int) -> bool:
+    """Kill any process using the specified port."""
+    try:
+        # Use lsof to find process on port, then kill it
+        result = run(f"lsof -ti:{port} | xargs kill -9 2>/dev/null", check=False)
+        if result.returncode == 0:
+            log.info(f"Killed process on port {port}")
+            time.sleep(1)
+            return True
+        return False
+    except Exception as e:
+        log.debug(f"Could not kill port {port}: {e}")
+        return False
+
+
 def tail_log(logfile: str, lines: int = 30) -> str:
     """Read last N lines of a log file."""
     try:
@@ -645,9 +686,10 @@ def phase_5_infrastructure():
             SERVICE_LOGS["minio"],
             env=minio_env,
         )
-        time.sleep(INFRA_START_WAIT)
+        # Wait for MinIO to be fully ready (not just port open)
+        wait_for_minio_ready(max_wait=20)
         if is_port_open(9000):
-            log.info("MinIO OK (port 9000)")
+            log.info("MinIO OK (port 9000 responding)")
         else:
             log.warning("MinIO may still be starting (port 9000 not open yet)")
 
@@ -723,6 +765,11 @@ def phase_6_services():
 
             log.info(f"Starting {name} on port {port}...")
 
+            # Clean up port if it's already in use
+            if is_port_open(port):
+                log.warning(f"Port {port} already in use, attempting cleanup...")
+                kill_port(port)
+
             svc_env = {**base_env, **svc["env"]}
             proc = start_background_process(
                 [sys.executable, "-m", "uvicorn", module,
@@ -780,8 +827,14 @@ def phase_6_services():
             elif os.path.isfile(f"{dashboard_dir}/package.json"):
                 log.info("No pre-built dashboard — running npm install & npm start (30-60s)...")
                 run(f"cd {dashboard_dir} && npm install", "npm install (dashboard)", timeout=120)
+                
+                # Fix permissions for node_modules/.bin scripts
+                run(f"chmod -R +x {dashboard_dir}/node_modules/.bin 2>/dev/null", 
+                    "Fix node_modules permissions", check=False)
+                
+                # Use npx to run react-scripts to avoid permission issues
                 _processes["dashboard"] = start_background_process(
-                    ["npm", "start"],
+                    ["npx", "react-scripts", "start"],
                     SERVICE_LOGS["dashboard"],
                     env={**os.environ, "PORT": "3000", "BROWSER": "none"},
                     cwd=dashboard_dir,
