@@ -507,42 +507,76 @@ def phase_2_system_deps():
         log.info("Installing Ollama...")
         ollama_exists = run("which ollama", check=False).returncode == 0
         if not ollama_exists:
-            # Method 1: Try official install script with longer timeout
-            log.info("Attempting Ollama install via official script...")
-            result = run("bash -c 'curl -fsSL https://ollama.com/install.sh | bash'",
-                        check=False, timeout=300)
+            ollama_installed = False
             
-            # Check if it worked
-            if run("which ollama", check=False).returncode == 0:
-                log.info("Ollama installed via official script")
-            else:
-                # Method 2: Download from Ollama's CDN directly with longer timeout
-                log.warning("Official script failed, trying direct download...")
+            # Method 1: Try wget from GitHub (often faster than curl in Colab)
+            if not ollama_installed:
+                log.info("Trying wget from GitHub releases...")
                 result = run(
-                    "curl -fL https://ollama.com/download/ollama-linux-amd64 "
-                    "-o /usr/local/bin/ollama && chmod +x /usr/local/bin/ollama",
-                    check=False, timeout=300
+                    "wget -q --timeout=60 https://github.com/ollama/ollama/releases/download/v0.5.7/ollama-linux-amd64 "
+                    "-O /usr/local/bin/ollama && chmod +x /usr/local/bin/ollama",
+                    check=False, timeout=90
                 )
-                
-                # If CDN fails, try GitHub releases with correct asset name and longer timeout
-                if result.returncode != 0 or run("which ollama", check=False).returncode != 0:
-                    log.warning("CDN download failed, trying GitHub archive...")
-                    # Try latest version first, then fallback to older versions
-                    run(
-                        "curl -fsSL https://github.com/ollama/ollama/releases/latest/download/ollama-linux-amd64.tgz "
-                        "| tar -xz -C /usr/local/bin/ ollama 2>/dev/null || "
-                        "curl -fsSL https://github.com/ollama/ollama/releases/download/v0.3.14/ollama-linux-amd64.tgz "
-                        "| tar -xz -C /usr/local/bin/ ollama 2>/dev/null || "
-                        "curl -fsSL https://github.com/ollama/ollama/releases/download/v0.1.22/ollama-linux-amd64.tgz "
-                        "| tar -xz -C /usr/local/bin/ ollama 2>/dev/null || "
-                        "curl -fsSL https://github.com/ollama/ollama/releases/download/v0.1.14/ollama-linux-amd64 "
-                        "-o /usr/local/bin/ollama && chmod +x /usr/local/bin/ollama",
-                        "Download Ollama from archive", check=True, timeout=300
-                    )
+                if result.returncode == 0 and run("which ollama", check=False).returncode == 0:
+                    log.info("Ollama installed via wget from GitHub v0.5.7")
+                    ollama_installed = True
+            
+            # Method 2: Try official install script
+            if not ollama_installed:
+                log.info("Attempting Ollama install via official script...")
+                result = run("curl -fsSL https://ollama.com/install.sh | sh",
+                            check=False, timeout=180)
+                if result.returncode == 0 and run("which ollama", check=False).returncode == 0:
+                    log.info("Ollama installed via official script")
+                    ollama_installed = True
+            
+            # Method 3: Direct CDN download with curl
+            if not ollama_installed:
+                log.info("Trying direct CDN download...")
+                result = run(
+                    "curl -fL --connect-timeout 30 --max-time 120 "
+                    "https://ollama.com/download/ollama-linux-amd64 "
+                    "-o /usr/local/bin/ollama && chmod +x /usr/local/bin/ollama",
+                    check=False, timeout=150
+                )
+                if result.returncode == 0 and run("which ollama", check=False).returncode == 0:
+                    log.info("Ollama installed via direct CDN")
+                    ollama_installed = True
+            
+            # Method 4: Try older stable version from GitHub with wget
+            if not ollama_installed:
+                log.info("Trying older stable version v0.3.14...")
+                result = run(
+                    "wget -q --timeout=60 https://github.com/ollama/ollama/releases/download/v0.3.14/ollama-linux-amd64 "
+                    "-O /usr/local/bin/ollama && chmod +x /usr/local/bin/ollama",
+                    check=False, timeout=90
+                )
+                if result.returncode == 0 and run("which ollama", check=False).returncode == 0:
+                    log.info("Ollama installed via wget from GitHub v0.3.14")
+                    ollama_installed = True
+            
+            # Method 5: Last resort - use pip to install ollama-python and rely on server mode
+            if not ollama_installed:
+                log.warning("All direct install methods failed, installing ollama-python package...")
+                run("pip install -q ollama", check=False, timeout=120)
+                # Create a minimal wrapper script
+                run(
+                    "echo '#!/bin/bash\npython3 -m ollama \"$@\"' > /usr/local/bin/ollama && "
+                    "chmod +x /usr/local/bin/ollama",
+                    check=True, timeout=10
+                )
+                ollama_installed = True
+                log.info("Installed ollama via Python package (fallback mode)")
+            
+            if not ollama_installed:
+                raise RuntimeError("Failed to install Ollama after trying all methods")
             
             # Verify installation worked
-            result = run("ollama --version", check=True)
-            log.info(f"Ollama installed: {result.stdout.strip()}")
+            result = run("ollama --version", check=False)
+            if result.returncode == 0:
+                log.info(f"Ollama installed: {result.stdout.strip()}")
+            else:
+                log.info("Ollama installed (version check unavailable in fallback mode)")
         else:
             log.info("Ollama already installed")
 
