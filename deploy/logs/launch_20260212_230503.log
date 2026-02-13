@@ -27,3 +27,39 @@
 [2026-02-12 23:05:09.583] [INFO] Uncommitted changes detected:
 [2026-02-12 23:05:09.799] [INFO]  M LeCoder-cgpu-CLI  M deploy/launch.ps1 ?? deploy/logs/
 [2026-02-12 23:05:09.851] [DEBUG] [DEBUG] Running git add -A...
+[2026-02-12 23:05:16.899] [INFO] Git add completed in 7039.6957ms
+[2026-02-12 23:05:17.346] [DEBUG] [DEBUG] Committing with message: deploy: auto-commit before Colab deployment (2026-02-12 23:05:17)
+[2026-02-12 23:05:26.627] [INFO] Git commit completed in 9266.6198ms
+[2026-02-12 23:05:26.635] [INFO] Commit output: [main 5b54a0a9] deploy: auto-commit before Colab deployment (2026-02-12 23:05:17)  3 files changed, 63 insertions(+), 1 deletion(-)  create mode 100644 deploy/logs/launch_20260212_230503.log  create mode 100644 deploy/logs/launch_latest.log
+[2026-02-12 23:05:26.646] [INFO] [OK] Committed
+[2026-02-12 23:05:27.874] [DEBUG] [DEBUG] Last commit: 5b54a0a9 deploy: auto-commit before Colab deployment (2026-02-12 23:05:17)
+[2026-02-12 23:05:27.881] [INFO] Last commit: 5b54a0a9 deploy: auto-commit before Colab deployment (2026-02-12 23:05:17)
+[2026-02-12 23:05:27.893] [INFO] [OK] Pushing to origin/main...
+[2026-02-12 23:05:27.902] [DEBUG] [DEBUG] Starting git push...
+[2026-02-12 23:05:38.800] [INFO] Git push completed in 10.8072971 seconds
+[2026-02-12 23:05:38.810] [INFO] Push exit code: 0
+[2026-02-12 23:05:38.816] [INFO] Push output: To https://github.com/landonking-gif/ai_final.git    a7a9e99b..5b54a0a9  main -> main
+[2026-02-12 23:05:39.101] [INFO] [OK] Push successful
+[2026-02-12 23:05:39.113] [INFO] Successfully pushed to origin/main
+[2026-02-12 23:05:39.147] [DEBUG] [DEBUG] Returning to original directory
+[2026-02-12 23:05:39.161] [INFO] Returned to original directory
+[2026-02-12 23:05:39.201] [INFO] === OPENING COLAB ===
+[2026-02-12 23:05:39.210] [INFO] Attempting to open Colab notebook
+[2026-02-12 23:05:39.233] [INFO] [OK] URL: https://colab.research.google.com/github/landonking-gif/ai_final/blob/main/deploy/colab_notebook.ipynb
+[2026-02-12 23:05:39.243] [INFO] Target URL: https://colab.research.google.com/github/landonking-gif/ai_final/blob/main/deploy/colab_notebook.ipynb
+[2026-02-12 23:05:39.264] [DEBUG] [DEBUG] Launching browser with Start-Process...
+[2026-02-12 23:05:39.746] [INFO] Browser process started in 458.0666ms
+[2026-02-12 23:05:39.762] [INFO] [OK] Browser opened
+[2026-02-12 23:05:39.769] [INFO] Successfully launched browser with Colab URL
+[2026-02-12 23:05:39.800] [INFO] === NEXT STEPS (in Google Colab) ===
+[2026-02-12 23:05:39.827] [INFO] Step 1: Select GPU runtime: Runtime -> Change runtime type -> T4 GPU
+[2026-02-12 23:05:39.881] [INFO] Step 2: Run all cells: Runtime -> Run all (or Ctrl+F9)
+[2026-02-12 23:05:39.937] [INFO] Step 3: Wait ~5 minutes for full deployment
+[2026-02-12 23:05:39.998] [INFO] Step 4: Your public API and Dashboard URLs will be printed at the end
+[2026-02-12 23:05:40.962] [INFO] To check status later, run Cell 2 (Diagnostics)
+[2026-02-12 23:05:41.053] [INFO] To restart a service, run Cell 3 (Recovery)
+[2026-02-12 23:05:42.304] [INFO] ========================================
+[2026-02-12 23:05:42.312] [INFO] Script Completed Successfully
+[2026-02-12 23:05:42.319] [INFO] End Time: 02/12/2026 23:05:42
+[2026-02-12 23:05:42.329] [INFO] Total Duration: 39.1090366 seconds
+[2026-02-12 23:05:42.336] [INFO] ========================================
