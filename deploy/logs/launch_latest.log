@@ -63,3 +63,32 @@
 [2026-02-12 23:05:42.319] [INFO] End Time: 02/12/2026 23:05:42
 [2026-02-12 23:05:42.329] [INFO] Total Duration: 39.1090366 seconds
 [2026-02-12 23:05:42.336] [INFO] ========================================
+[2026-02-13 11:28:36.447] [INFO] ========================================
+[2026-02-13 11:28:36.587] [INFO] Script Started: launch.ps1
+[2026-02-13 11:28:36.597] [INFO] Start Time: 02/13/2026 11:28:36
+[2026-02-13 11:28:36.608] [INFO] Log File: C:\Users\dmilner.AGV-040318-PC\Downloads\landon\ai_final\deploy\logs\launch_20260213_112836.log
+[2026-02-13 11:28:36.722] [INFO] Parameters: NoPush=False, Help=False
+[2026-02-13 11:28:36.731] [INFO] Script Path: C:\Users\dmilner.AGV-040318-PC\Downloads\landon\ai_final\deploy\launch.ps1
+[2026-02-13 11:28:36.740] [INFO] Repo Root: C:\Users\dmilner.AGV-040318-PC\Downloads\landon\ai_final
+[2026-02-13 11:28:36.749] [INFO] Colab URL: https://colab.research.google.com/github/landonking-gif/ai_final/blob/main/deploy/colab_notebook.ipynb
+[2026-02-13 11:28:36.763] [INFO] PowerShell Version: 5.1.26100.6584
+[2026-02-13 11:28:36.777] [INFO] User: dmilner
+[2026-02-13 11:28:36.787] [INFO] Computer: AGV-040318-PC
+[2026-02-13 11:28:36.799] [INFO] Current Directory: C:\Users\dmilner.AGV-040318-PC\Downloads\landon\ai_final
+[2026-02-13 11:28:36.807] [INFO] ========================================
+[2026-02-13 11:28:36.946] [INFO] === PUSHING TO GITHUB ===
+[2026-02-13 11:28:36.955] [INFO] Starting Git operations
+[2026-02-13 11:28:36.975] [DEBUG] [DEBUG] Changing to repo root: C:\Users\dmilner.AGV-040318-PC\Downloads\landon\ai_final
+[2026-02-13 11:28:36.990] [INFO] Changed directory to: C:\Users\dmilner.AGV-040318-PC\Downloads\landon\ai_final
+[2026-02-13 11:28:37.331] [DEBUG] [DEBUG] Git version: git version 2.52.0.windows.1
+[2026-02-13 11:28:37.353] [INFO] Git version: git version 2.52.0.windows.1
+[2026-02-13 11:28:37.651] [DEBUG] [DEBUG] Current branch: main
+[2026-02-13 11:28:37.665] [INFO] Current branch: main
+[2026-02-13 11:28:38.007] [DEBUG] [DEBUG] Remote URL: https://github.com/landonking-gif/ai_final.git
+[2026-02-13 11:28:38.050] [INFO] Remote URL: https://github.com/landonking-gif/ai_final.git
+[2026-02-13 11:28:38.062] [DEBUG] [DEBUG] Checking git status...
+[2026-02-13 11:28:41.581] [INFO] Git status check completed in 2367.373ms
+[2026-02-13 11:28:42.140] [INFO] [OK] Found uncommitted changes - staging and committing...
+[2026-02-13 11:28:42.173] [INFO] Uncommitted changes detected:
+[2026-02-13 11:28:42.191] [INFO]  M LeCoder-cgpu-CLI  M deploy/logs/launch_latest.log ?? deploy/logs/launch_20260213_112836.log
+[2026-02-13 11:28:42.208] [DEBUG] [DEBUG] Running git add -A...
