@@ -507,33 +507,37 @@ def phase_2_system_deps():
         log.info("Installing Ollama...")
         ollama_exists = run("which ollama", check=False).returncode == 0
         if not ollama_exists:
-            # Method 1: Try official install script with bash
+            # Method 1: Try official install script with longer timeout
             log.info("Attempting Ollama install via official script...")
             result = run("bash -c 'curl -fsSL https://ollama.com/install.sh | bash'",
-                        check=False, timeout=180)
+                        check=False, timeout=300)
             
             # Check if it worked
             if run("which ollama", check=False).returncode == 0:
                 log.info("Ollama installed via official script")
             else:
-                # Method 2: Download from Ollama's CDN directly
+                # Method 2: Download from Ollama's CDN directly with longer timeout
                 log.warning("Official script failed, trying direct download...")
                 result = run(
                     "curl -fL https://ollama.com/download/ollama-linux-amd64 "
                     "-o /usr/local/bin/ollama && chmod +x /usr/local/bin/ollama",
-                    check=False, timeout=120
+                    check=False, timeout=300
                 )
                 
-                # If CDN fails, try GitHub releases with correct asset name
+                # If CDN fails, try GitHub releases with correct asset name and longer timeout
                 if result.returncode != 0 or run("which ollama", check=False).returncode != 0:
                     log.warning("CDN download failed, trying GitHub archive...")
-                    # Download and extract from GitHub releases (they distribute as tgz)
+                    # Try latest version first, then fallback to older versions
                     run(
+                        "curl -fsSL https://github.com/ollama/ollama/releases/latest/download/ollama-linux-amd64.tgz "
+                        "| tar -xz -C /usr/local/bin/ ollama 2>/dev/null || "
+                        "curl -fsSL https://github.com/ollama/ollama/releases/download/v0.3.14/ollama-linux-amd64.tgz "
+                        "| tar -xz -C /usr/local/bin/ ollama 2>/dev/null || "
                         "curl -fsSL https://github.com/ollama/ollama/releases/download/v0.1.22/ollama-linux-amd64.tgz "
                         "| tar -xz -C /usr/local/bin/ ollama 2>/dev/null || "
                         "curl -fsSL https://github.com/ollama/ollama/releases/download/v0.1.14/ollama-linux-amd64 "
                         "-o /usr/local/bin/ollama && chmod +x /usr/local/bin/ollama",
-                        "Download Ollama from archive", check=True, timeout=120
+                        "Download Ollama from archive", check=True, timeout=300
                     )
             
             # Verify installation worked
