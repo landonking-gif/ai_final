@@ -702,6 +702,14 @@ def phase_5_infrastructure():
 
         # ── MinIO ──
         log.info("Starting MinIO...")
+        
+        # CRITICAL: Kill any existing MinIO processes and free ports
+        log.info("Checking for existing MinIO processes...")
+        run("pkill -9 minio 2>/dev/null", check=False)
+        kill_port(9000)  # MinIO API port
+        kill_port(9001)  # MinIO Console port
+        time.sleep(2)  # Give ports time to be released
+        
         os.makedirs("/tmp/minio_data", exist_ok=True)
         
         # Verify MinIO binary exists and is executable
