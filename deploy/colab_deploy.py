@@ -442,8 +442,8 @@ def phase_2_system_deps():
         log.info("Installing Ollama...")
         ollama_exists = run("which ollama", check=False).returncode == 0
         if not ollama_exists:
-            # Download latest Linux binary directly
-            run("curl -fL https://ollama.com/download/ollama-linux-amd64 "
+            # Download latest Linux binary from GitHub releases
+            run("curl -fsSL https://github.com/ollama/ollama/releases/latest/download/ollama-linux-amd64 "
                 "-o /usr/local/bin/ollama && chmod +x /usr/local/bin/ollama",
                 "Download Ollama binary", check=True, timeout=120)
             # Verify installation
