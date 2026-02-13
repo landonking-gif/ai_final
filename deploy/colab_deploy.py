@@ -334,9 +334,9 @@ def wait_for_health(port: int, path: str = "/health", name: str = "",
     return False
 
 
-def wait_for_minio_ready(max_wait: int = 20) -> bool:
+def wait_for_minio_ready(max_wait: int = 60) -> bool:
     """Wait for MinIO to be ready by checking port + attempting a connection."""
-    log.info("Waiting for MinIO to be fully ready...")
+    log.info("Waiting for MinIO to be fully ready (may take 30-60s)...")
     deadline = time.time() + max_wait
     attempt = 0
     while time.time() < deadline:
@@ -344,19 +344,31 @@ def wait_for_minio_ready(max_wait: int = 20) -> bool:
         # Check if port is open first
         if not is_port_open(9000):
             log.debug(f"MinIO attempt {attempt}: port 9000 not open yet")
-            time.sleep(2)
+            time.sleep(3)
             continue
         
-        # Try an actual HTTP request to MinIO's root endpoint
+        # Once port is open, give it a moment to initialize
+        time.sleep(2)
+        
+        # Try multiple health check methods
+        # Method 1: Try the health endpoint
         try:
-            req = urllib.request.urlopen("http://localhost:9000/minio/health/live", timeout=3)
-            log.info(f"MinIO ready (attempt {attempt}): HTTP {req.getcode()}")
+            req = urllib.request.urlopen("http://localhost:9000/minio/health/live", timeout=5)
+            log.info(f"MinIO ready via health endpoint (attempt {attempt}): HTTP {req.getcode()}")
             return True
-        except Exception as e:
-            log.debug(f"MinIO attempt {attempt}: {str(e)[:80]}")
-            time.sleep(2)
+        except Exception as e1:
+            log.debug(f"MinIO health endpoint attempt {attempt} failed: {str(e1)[:60]}")
+            
+            # Method 2: Try the root endpoint
+            try:
+                req = urllib.request.urlopen("http://localhost:9000/", timeout=5)
+                log.info(f"MinIO ready via root endpoint (attempt {attempt}): HTTP {req.getcode()}")
+                return True
+            except Exception as e2:
+                log.debug(f"MinIO root endpoint attempt {attempt} failed: {str(e2)[:60]}")
+                time.sleep(3)
     
-    log.warning(f"MinIO not fully ready after {max_wait}s, but will attempt to continue")
+    log.error(f"MinIO did NOT become ready within {max_wait}s")
     return False
 
 
@@ -686,12 +698,12 @@ def phase_5_infrastructure():
             SERVICE_LOGS["minio"],
             env=minio_env,
         )
-        # Wait for MinIO to be fully ready (not just port open)
-        wait_for_minio_ready(max_wait=20)
-        if is_port_open(9000):
-            log.info("MinIO OK (port 9000 responding)")
-        else:
-            log.warning("MinIO may still be starting (port 9000 not open yet)")
+        # Wait for MinIO to be fully ready (not just port open) - CRITICAL check
+        if not wait_for_minio_ready(max_wait=60):
+            log.error("MinIO failed to become ready within 60 seconds")
+            log.error("Check MinIO logs: tail /tmp/agentic_logs/minio.log")
+            raise DeploymentError("MinIO initialization failed - cannot proceed without object storage")
+        log.info("✓ MinIO is READY and responding to health checks")
 
         # ── Environment Variables ──
         log.info("Configuring environment variables...")
