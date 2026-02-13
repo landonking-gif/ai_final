@@ -334,16 +334,25 @@ def wait_for_health(port: int, path: str = "/health", name: str = "",
     return False
 
 
-def wait_for_minio_ready(max_wait: int = 60) -> bool:
+def wait_for_minio_ready(max_wait: int = 60, process: subprocess.Popen = None) -> bool:
     """Wait for MinIO to be ready by checking port + attempting a connection."""
-    log.info("Waiting for MinIO to be fully ready (may take 30-60s)...")
+    log.info("Waiting for MinIO to be fully ready (may take 30-90s)...")
     deadline = time.time() + max_wait
     attempt = 0
+    last_error_msg = "Unknown error"
+    
     while time.time() < deadline:
         attempt += 1
+        
+        # First, check if the process is still alive
+        if process and process.poll() is not None:
+            log.error(f"MinIO process died unexpectedly with exit code {process.returncode}")
+            log.error("Check MinIO logs: tail /tmp/agentic_logs/minio.log")
+            return False
+        
         # Check if port is open first
         if not is_port_open(9000):
-            log.debug(f"MinIO attempt {attempt}: port 9000 not open yet")
+            log.debug(f"MinIO attempt {attempt}: port 9000 not open yet (process alive: {process is None or process.poll() is None})")
             time.sleep(3)
             continue
         
@@ -357,7 +366,8 @@ def wait_for_minio_ready(max_wait: int = 60) -> bool:
             log.info(f"MinIO ready via health endpoint (attempt {attempt}): HTTP {req.getcode()}")
             return True
         except Exception as e1:
-            log.debug(f"MinIO health endpoint attempt {attempt} failed: {str(e1)[:60]}")
+            last_error_msg = str(e1)
+            log.debug(f"MinIO health endpoint attempt {attempt} failed: {str(e1)[:100]}")
             
             # Method 2: Try the root endpoint
             try:
@@ -365,10 +375,12 @@ def wait_for_minio_ready(max_wait: int = 60) -> bool:
                 log.info(f"MinIO ready via root endpoint (attempt {attempt}): HTTP {req.getcode()}")
                 return True
             except Exception as e2:
-                log.debug(f"MinIO root endpoint attempt {attempt} failed: {str(e2)[:60]}")
+                last_error_msg = str(e2)
+                log.debug(f"MinIO root endpoint attempt {attempt} failed: {str(e2)[:100]}")
                 time.sleep(3)
     
     log.error(f"MinIO did NOT become ready within {max_wait}s")
+    log.error(f"Last error: {last_error_msg[:200]}")
     return False
 
 
@@ -691,6 +703,17 @@ def phase_5_infrastructure():
         # ── MinIO ──
         log.info("Starting MinIO...")
         os.makedirs("/tmp/minio_data", exist_ok=True)
+        
+        # Verify MinIO binary exists and is executable
+        if not os.path.exists("/usr/local/bin/minio"):
+            log.error("MinIO binary not found at /usr/local/bin/minio")
+            raise DeploymentError("MinIO binary missing - Phase 2 may have failed")
+        
+        # Check permissions on data directory
+        if not os.access("/tmp/minio_data", os.W_OK):
+            log.warning("/tmp/minio_data is not writable, attempting chmod...")
+            os.chmod("/tmp/minio_data", 0o755)
+        
         minio_env = {**os.environ, "MINIO_ROOT_USER": "minioadmin", "MINIO_ROOT_PASSWORD": "minioadmin"}
         _processes["minio"] = start_background_process(
             ["/usr/local/bin/minio", "server", "/tmp/minio_data",
@@ -698,11 +721,50 @@ def phase_5_infrastructure():
             SERVICE_LOGS["minio"],
             env=minio_env,
         )
+        minio_proc = _processes["minio"]
+        log.info(f"MinIO process started with PID {minio_proc.pid}")
+        
+        # Give MinIO a moment to start before checking
+        time.sleep(2)
+        
+        # Verify process is still running
+        if minio_proc.poll() is not None:
+            log.error(f"MinIO process died immediately with exit code {minio_proc.returncode}")
+            log.error("Reading MinIO log for diagnostics...")
+            try:
+                with open(SERVICE_LOGS["minio"], "r") as f:
+                    log_content = f.read()
+                    if log_content:
+                        log.error(f"MinIO log output:\n{log_content[-1000:]}")
+                    else:
+                        log.error("MinIO log is empty - process may have failed to start")
+            except Exception as e:
+                log.error(f"Could not read MinIO log: {e}")
+            raise DeploymentError("MinIO process failed to start - check logs above")
+        
         # Wait for MinIO to be fully ready (not just port open) - CRITICAL check
-        if not wait_for_minio_ready(max_wait=60):
-            log.error("MinIO failed to become ready within 60 seconds")
-            log.error("Check MinIO logs: tail /tmp/agentic_logs/minio.log")
+        # Increased timeout to 90 seconds for Colab environments
+        if not wait_for_minio_ready(max_wait=90, process=minio_proc):
+            log.error("MinIO failed to become ready within 90 seconds")
+            log.error("Reading MinIO log for diagnostics...")
+            try:
+                with open(SERVICE_LOGS["minio"], "r") as f:
+                    log_content = f.read()
+                    if log_content:
+                        log.error(f"MinIO log output (last 2000 chars):\n{log_content[-2000:]}")
+                    else:
+                        log.error("MinIO log is empty - no output captured")
+            except Exception as e:
+                log.error(f"Could not read MinIO log: {e}")
+            
+            # Check if process is still running
+            if minio_proc.poll() is not None:
+                log.error(f"MinIO process is dead (exit code: {minio_proc.returncode})")
+            else:
+                log.error("MinIO process is still running but not responding to health checks")
+            
             raise DeploymentError("MinIO initialization failed - cannot proceed without object storage")
+        
         log.info("✓ MinIO is READY and responding to health checks")
 
         # ── Environment Variables ──
