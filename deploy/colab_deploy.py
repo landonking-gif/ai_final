@@ -438,15 +438,41 @@ def phase_2_system_deps():
             "-O /usr/local/bin/minio && chmod +x /usr/local/bin/minio",
             "Install MinIO binary")
 
-        # Ollama - download binary directly (Colab-compatible)
+        # Ollama - install using multiple fallback methods
         log.info("Installing Ollama...")
         ollama_exists = run("which ollama", check=False).returncode == 0
         if not ollama_exists:
-            # Download latest Linux binary from GitHub releases
-            run("curl -fsSL https://github.com/ollama/ollama/releases/latest/download/ollama-linux-amd64 "
-                "-o /usr/local/bin/ollama && chmod +x /usr/local/bin/ollama",
-                "Download Ollama binary", check=True, timeout=120)
-            # Verify installation
+            # Method 1: Try official install script (sometimes works in Colab)
+            log.info("Attempting Ollama install via official script...")
+            result = run("curl -fsSL https://ollama.com/install.sh | sh",
+                        check=False, timeout=120)
+            
+            # Check if it worked
+            if run("which ollama", check=False).returncode == 0:
+                log.info("Ollama installed via official script")
+            else:
+                # Method 2: Manual download of latest stable binary
+                log.warning("Official script failed, downloading binary manually...")
+                # Try to get latest version tag from GitHub API
+                version_check = run(
+                    "curl -fsSL https://api.github.com/repos/ollama/ollama/releases/latest | "
+                    "grep '\"tag_name\"' | cut -d '\"' -f 4",
+                    check=False
+                )
+                
+                if version_check.returncode == 0 and version_check.stdout.strip():
+                    version = version_check.stdout.strip()
+                    log.info(f"Found latest Ollama version: {version}")
+                    download_url = f"https://github.com/ollama/ollama/releases/download/{version}/ollama-linux-amd64"
+                else:
+                    # Fallback to known stable version
+                    log.warning("Could not determine latest version, using fallback v0.1.26")
+                    download_url = "https://github.com/ollama/ollama/releases/download/v0.1.26/ollama-linux-amd64"
+                
+                run(f"curl -fsSL {download_url} -o /usr/local/bin/ollama && chmod +x /usr/local/bin/ollama",
+                    "Download Ollama binary", check=True, timeout=120)
+            
+            # Verify installation worked
             result = run("ollama --version", check=True)
             log.info(f"Ollama installed: {result.stdout.strip()}")
         else:
